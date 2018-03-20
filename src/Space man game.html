@@ -1,0 +1,483 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Space Adventure</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<style>
+*
+{
+  padding: 0px;
+  margin: 0px;
+}
+#start
+{
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #ffffff;
+  text-align:center;
+  font-size:25px;
+ }
+#stage 
+{
+  position: relative;
+  width: 512px;
+  height: 512px;
+  background-image: url("../images/background.jpg");
+  z-index: -1;
+}
+
+.cell
+{
+  display: block;
+  position: absolute;
+  width: 64px;
+  height: 64px;
+}
+#button
+{
+  position: absolute;
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+	top:50%;
+}
+#wrapper
+{
+text-align:center;
+}
+
+</style>
+
+<section id="game">
+  <h1>Space Adventure</h1>
+
+
+  <div id="start"><br><br><br><br><br><br><br><br><b>Space Adventure Game</b>
+  <br>Click the start game button to begin!</div>
+      <div id="stage"></div>
+  <p id="output"></p> 
+  
+  <div id="wrapper"><button id="button" type="button" onclick="start();">Start Game</button></div>
+
+</section>
+
+<script>
+
+//the function that hides the start screen and starts the game
+function start(){
+$('#start').hide();
+$('#button').hide();
+
+
+var stage = document.querySelector("#stage");
+var output = document.querySelector("#output");
+
+//the keyboard listener that detects keys
+window.addEventListener("keydown", keydownHandler, false);
+
+//The game map with the rocks and ufos
+var map =
+[
+  [0, 2, 0, 0, 0, 0, 0, 3],
+  [0, 0, 0, 1, 0, 0, 0, 0],
+  [0, 1, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 2, 0, 0, 0],
+  [0, 2, 0, 1, 0, 0, 2, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 1, 0],
+  [0, 0, 0, 0, 2, 0, 0, 0],
+];
+
+//the ship and monster starting point
+var gameObjects =
+[
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 5, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
+  [4, 0, 0, 0, 0, 0, 0, 0],
+];
+
+//codes for each object on the map
+var SPACE = 0;
+var ROCK = 1;
+var UFO = 2;
+var HOME = 3;
+var SHIP = 4;
+var MONSTER = 5;
+
+//cell size
+var SIZE = 64;
+
+//the size of the map
+var ROWS = map.length;
+var COLUMNS = map[0].length;
+
+//looks for the ship and monster starting positions
+var shipRow;
+var shipColumn;
+var monsterRow;
+var monsterColumn;
+
+for(var row = 0; row < ROWS; row++) 
+{	
+  for(var column = 0; column < COLUMNS; column++) 
+  {
+    if(gameObjects[row][column] === SHIP)
+    { 
+      shipRow = row;
+      shipColumn = column;
+    }
+    if(gameObjects[row][column] === MONSTER)
+    { 
+      monsterRow = row;
+      monsterColumn = column;
+    }
+  }
+}
+
+//codes for the directions
+var UP = 38;
+var DOWN = 40;
+var RIGHT = 39;
+var LEFT = 37;
+
+//the resources used 
+var Fuel = 10;
+var spacecoins = 10;
+var experience = 0;
+var gameMessage = "Use the arrow keys to find your way home.";
+
+var audio = new Audio("../images/win.mp3");
+
+render();
+//A switch case function that determines what happens tot he ship when the user pushes an arrow key
+function keydownHandler(event)
+{ 
+  switch(event.keyCode)
+  {
+    case UP:
+	    if(shipRow > 0)
+	    {
+	      gameObjects[shipRow][shipColumn] = 0;
+	      shipRow--;
+	      gameObjects[shipRow][shipColumn] = SHIP;
+	    }
+	    break;
+	  
+	  case DOWN:
+	    if(shipRow < ROWS - 1)
+	    {
+	      gameObjects[shipRow][shipColumn] = 0;
+	      shipRow++;
+	      gameObjects[shipRow][shipColumn] = SHIP;
+	    }
+	    break;
+	    
+	  case LEFT:
+	    if(shipColumn > 0)
+	    {
+	      gameObjects[shipRow][shipColumn] = 0;
+	      shipColumn--;
+	      gameObjects[shipRow][shipColumn] = SHIP;
+	    }
+	    break;  
+	    
+	  case RIGHT:
+	    if(shipColumn < COLUMNS - 1)
+	    {
+	      gameObjects[shipRow][shipColumn] = 0;
+	      shipColumn++;
+	      gameObjects[shipRow][shipColumn] = SHIP;
+	    }
+	    break; 
+  }
+  
+  //output message determined by what the ship lands on
+  switch(map[shipRow][shipColumn])
+  {
+    case SPACE:
+      gameMessage = "You fly through space."
+      break;
+    
+    case UFO:
+      fight();
+      break; 
+    
+    case ROCK:
+      trade();
+      break; 
+      
+    case HOME:
+      endGame();
+      break;      
+  }
+  
+  //monster moving function
+  moveMonster();
+  
+  
+  //if statement to figure out if the player touched the monster
+  if(gameObjects[shipRow][shipColumn] === MONSTER)
+  {
+    endGame();
+  }
+  
+  //minus fuel for moving
+  Fuel--;
+  
+  //lose condition to determine if the player has run out of either resource
+  if(Fuel <= 0 || spacecoins <= 0)
+  {
+    endGame();
+  }
+  
+  render();
+}
+//the function that moves the monster
+function moveMonster()
+{
+  var UP = 1;
+  var DOWN = 2;
+  var LEFT = 3;
+  var RIGHT = 4;
+  var validDirections = [];
+  
+  var direction = undefined;
+  
+//find out if the cell is space or not and pushes it to the array if it is space
+  if(monsterRow > 0)
+  {
+    var thingAbove = map[monsterRow - 1][monsterColumn];
+    if(thingAbove === SPACE)
+	  {
+	    validDirections.push(UP);
+	  }
+  }
+  if(monsterRow < ROWS - 1)
+  { 
+    var thingBelow = map[monsterRow + 1][monsterColumn];
+    if(thingBelow === SPACE)
+	  {
+	    validDirections.push(DOWN);
+	  }
+  }
+  if(monsterColumn > 0)
+  {
+    var thingToTheLeft = map[monsterRow][monsterColumn - 1];
+    if(thingToTheLeft === SPACE)
+	  {
+	    validDirections.push(LEFT);
+	  }
+  } 
+  if(monsterColumn < COLUMNS - 1)
+  {
+    var thingToTheRight = map[monsterRow][monsterColumn + 1];
+    if(thingToTheRight === SPACE)
+	  {
+	    validDirections.push(RIGHT);
+	  }
+  } 
+  
+  if(validDirections.length !== 0)
+  {
+    var randomNumber = Math.floor(Math.random() * validDirections.length);
+    direction = validDirections[randomNumber];
+  }
+  
+  //switch case to move the monster
+  switch(direction)
+  {
+    case UP:
+		  gameObjects[monsterRow][monsterColumn] = 0;
+		  monsterRow--; 
+		  gameObjects[monsterRow][monsterColumn] = MONSTER;
+		  break;
+	  
+	  case DOWN:
+	    gameObjects[monsterRow][monsterColumn] = 0;
+		  monsterRow++;
+		  gameObjects[monsterRow][monsterColumn] = MONSTER;
+	    break;
+	  
+	  case LEFT:
+	    gameObjects[monsterRow][monsterColumn] = 0;
+		  monsterColumn--;
+		  gameObjects[monsterRow][monsterColumn] = MONSTER;
+	    break;
+	 
+	 case RIGHT:
+	    gameObjects[monsterRow][monsterColumn] = 0;
+		  monsterColumn++;
+		  gameObjects[monsterRow][monsterColumn] = MONSTER;
+  }
+}
+
+function trade()
+{
+//calculates the fuel the rock has and how much it should cost.
+  var ROCKsFuel = experience + spacecoins;
+  var cost = Math.ceil(Math.random() * ROCKsFuel);
+  
+//if the player has enough space coins, buy the fuel.
+  if(spacecoins > cost)
+  {
+    Fuel += ROCKsFuel;
+    spacecoins -= cost;
+    experience += 2;
+    
+    gameMessage 
+      = "You buy " + ROCKsFuel + " units of fuel"
+      + " for " + cost + " space coins."
+  }
+  else
+  {
+//if not enough space coins, dont buy the fuel
+    experience += 1;
+    gameMessage = "You don't have enough space coins to buy fuel."
+  }
+}
+//function for when the player runs into a ufo
+function fight()
+{
+ //ship strength determining variables 
+  var shipStrength = Math.ceil((Fuel + spacecoins) / 2);
+  var UFOStrength = Math.ceil(Math.random() * shipStrength * 2);
+ //if statement for if the player loses the fight or not 
+  if(UFOStrength > shipStrength)
+  {
+    var stolenspacecoins = Math.round(UFOStrength / 2);
+    spacecoins -= stolenspacecoins;
+    
+    experience += 1;
+    
+    gameMessage 
+      = "You fight and LOSE " + stolenspacecoins + " space coins."
+      + " Ship's strength: " + shipStrength 
+      + " UFO's strength: " + UFOStrength;
+  }
+  else
+  {
+    var UFOspacecoins = Math.round(UFOStrength / 2);
+    spacecoins += UFOspacecoins;
+    experience += 2;
+    
+    gameMessage 
+      = "You fight and WIN " + UFOspacecoins + " space coins."
+      + " Ship's strength: " + shipStrength 
+      + " UFO's strength: " + UFOStrength;
+  } 
+}
+//function that runs with the player achieves wither a win or lose condition
+function endGame()
+{
+  if(map[shipRow][shipColumn] === HOME)
+  {
+//calculate and display the game score and play the winning audio
+    var score = Fuel + spacecoins + experience;
+    
+    gameMessage 
+      = "You made it home ALIVE! " + "Final Score: " + score; 
+	  audio.play();
+  }
+  else if(gameObjects[shipRow][shipColumn] === MONSTER)
+  {
+    gameMessage 
+      = "Your ship has been hijacked by aliens!";
+  }
+//else statement that runs when the player achieves a lose condition
+  else
+  {
+    if(spacecoins <= 0)
+    {
+      gameMessage += " You've run out of space coins!"; 
+    }
+    else
+    {
+      gameMessage += " You've run out of Fuel!"; 
+    }
+    
+    gameMessage 
+      += " Your crew ejects you from your ship!"; 
+  }
+  
+//take away the keyboard listener so they cannot play anymore
+  window.removeEventListener("keydown", keydownHandler, false);
+}
+//function that renders the game
+function render()
+{
+  if(stage.hasChildNodes())
+  {
+    for(var i = 0; i < ROWS * COLUMNS; i++) 
+    {	 
+      stage.removeChild(stage.firstChild);
+    }
+  }
+  
+//loops through the arrays to figure out where things are on the map
+  for(var row = 0; row < ROWS; row++) 
+  {	
+    for(var column = 0; column < COLUMNS; column++) 
+    { 
+      var cell = document.createElement("img");
+
+     cell.setAttribute("class", "cell");
+      stage.appendChild(cell);
+      switch(map[row][column])
+      {
+        case SPACE:
+          cell.src = "../images/space.png";
+          break;
+
+        case ROCK:
+          cell.src = "../images/rock.png";
+          break; 
+
+        case UFO:
+          cell.src = "../images/ufo.png";
+          break; 
+
+        case HOME:
+          cell.src = "../images/planet.png";
+          break;   
+      }  
+      
+//switch case to add the ship and the monster
+	    switch(gameObjects[row][column])
+	    {
+	      case SHIP:
+	        cell.src = "../images/ship.png";
+	        break;   
+	        
+	      case MONSTER:
+	        cell.src = "../images/monster.png";
+	        break;  
+	    } 
+  
+      cell.style.top = row * SIZE + "px";
+      cell.style.left = column * SIZE + "px";
+    }
+  }
+  
+	output.innerHTML = gameMessage;
+	
+//writes out the players resources at the bottom of the game
+	output.innerHTML 
+	  += "<br>Space Coins: " + spacecoins + ", Fuel: " 
+	  + Fuel + ", Experience: " + experience;
+}
+}
+</script>
+
